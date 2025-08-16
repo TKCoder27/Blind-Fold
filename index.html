@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blindfold Guessing Game</title>
+<style>
+:root {
+  --accent1: #00eaff;
+  --accent2: #ff00c8;
+}
+body {
+  margin:0; padding:0;
+  font-family:'Outfit', sans-serif;
+  overflow:hidden;
+  background: linear-gradient(-45deg, #0f1115, #151a28, #0f1115, #151a28);
+  background-size: 400% 400%;
+  animation: bgAnimate 15s ease infinite;
+  color:#fff;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+@keyframes bgAnimate {
+  0%{background-position:0% 50%;}
+  50%{background-position:100% 50%;}
+  100%{background-position:0% 50%;}
+}
+.screen {
+  display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; width:100%; height:100%;
+}
+.screen.active { display:flex; }
+
+/* Loading Screen */
+#loading img {
+  width:220px; border-radius:25px;
+  box-shadow:0 0 40px rgba(255,255,255,0.7);
+  animation: bounce 2s infinite ease-in-out;
+}
+@keyframes bounce {
+  0%,100%{transform:translateY(0);}
+  50%{transform:translateY(-20px);}
+}
+.skibidi-text {
+  margin-top:20px;
+  font-size:40px;
+  font-weight:900;
+  animation: wobble 1.2s infinite ease-in-out;
+  text-shadow:0 0 20px var(--accent1),0 0 40px var(--accent2);
+}
+@keyframes wobble {
+  0%{transform:rotate(0deg);}
+  25%{transform:rotate(6deg) scale(1.1);}
+  50%{transform:rotate(0deg);}
+  75%{transform:rotate(-6deg) scale(1.1);}
+  100%{transform:rotate(0deg);}
+}
+
+/* Buttons and Cards */
+button, .card {
+  padding:15px 30px;
+  border:none;
+  border-radius:20px;
+  font-weight:700;
+  font-size:18px;
+  cursor:pointer;
+  transition:all 0.3s ease;
+}
+button:hover, .card:hover {
+  transform:scale(1.08);
+  box-shadow:0 0 25px var(--accent1),0 0 50px var(--accent2);
+}
+
+/* Category Cards */
+.option-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:25px;
+  width:90%;
+  max-width:1000px;
+  margin-top:30px;
+}
+.card {
+  background:linear-gradient(145deg,#1d1f30,#121523);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center;
+  padding:20px;
+}
+.card .icon {
+  font-size:50px;
+  margin-bottom:10px;
+  text-shadow:0 0 15px var(--accent1),0 0 30px var(--accent2);
+}
+
+/* Countdown */
+#countdown {
+  font-size:80px; font-weight:900;
+  color:var(--accent1);
+  text-shadow:0 0 20px var(--accent2),0 0 40px var(--accent1);
+  animation:pulse 1s infinite;
+}
+@keyframes pulse {
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(1.2);}
+}
+
+/* Word Reveal */
+.word {
+  font-size:40px; font-weight:900;
+  padding:25px 50px;
+  border-radius:20px;
+  background:rgba(0,0,0,0.5);
+  box-shadow:0 0 30px var(--accent1),0 0 50px var(--accent2);
+  margin-top:20px;
+}
+</style>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="loading" class="screen active">
+  <img id="loadingImg" src="" alt="Loading GIF">
+  <h1 id="loadingText" class="skibidi-text">LOADING...</h1>
+</div>
+
+<!-- Theme Selection -->
+<div id="themes" class="screen">
+  <h1>🎨 Choose Theme</h1>
+  <div class="option-grid">
+    <div class="card" onclick="setTheme('#00eaff','#ff00c8')">🌌 Cyan + Pink</div>
+    <div class="card" onclick="setTheme('#a200ff','#ffee00')">💜 Purple + Yellow</div>
+    <div class="card" onclick="setTheme('#ff0000','#004cff')">🔥 Red + Blue</div>
+  </div>
+</div>
+
+<!-- Category Selection -->
+<div id="categories" class="screen">
+  <h1>📂 Choose Category</h1>
+  <div class="option-grid">
+    <div class="card" onclick="startCountdown('celebrities')"><div class="icon">🌟</div>Super Famous Celebrities</div>
+    <div class="card" onclick="startCountdown('athletes')"><div class="icon">⚽</div>Athletes</div>
+    <div class="card" onclick="startCountdown('others')"><div class="icon">👑</div>Other Famous People</div>
+  </div>
+</div>
+
+<!-- Countdown Screen -->
+<div id="countdownScreen" class="screen">
+  <h1 id="countdown">10</h1>
+  <p>Get ready... your word is coming 👀</p>
+</div>
+
+<!-- Word Reveal -->
+<div id="wordScreen" class="screen">
+  <h1 class="word" id="word"></h1>
+  <button onclick="goToScreen('categories')">Play Again</button>
+</div>
+
+<script>
+// Skibidi GIFs and text
+const loadingImgs = [
+  "https://media.tenor.com/WsYtFq0n2s4AAAAM/skibidi-toilet.gif",
+  "https://media.tenor.com/dUMpOohjq2EAAAAM/skibidi-bop.gif",
+  "https://media.tenor.com/46GZ5C_E1VQAAAAM/skibidi-toilet-dance.gif"
+];
+const loadingTexts = [
+  "🚽 SKIBIDI LOADING...",
+  "🎶 BOP YES YES YES 🎶",
+  "👁👄👁 HOLD TIGHT...",
+  "🔥 CHAOS IS COMING..."
+];
+
+// Randomize loading screen
+function randomLoading() {
+  const img = loadingImgs[Math.floor(Math.random()*loadingImgs.length)];
+  const text = loadingTexts[Math.floor(Math.random()*loadingTexts.length)];
+  document.getElementById("loadingImg").src = img;
+  document.getElementById("loadingText").innerText = text;
+}
+randomLoading();
+setTimeout(()=>goToScreen("themes"),4000);
+
+// Screens
+function goToScreen(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+// Themes
+function setTheme(c1,c2){
+  document.documentElement.style.setProperty("--accent1",c1);
+  document.documentElement.style.setProperty("--accent2",c2);
+  goToScreen("categories");
+}
+
+// Words
+const words = {
+  celebrities:["Taylor Swift","MrBeast","Ariana Grande","Justin Bieber","Dwayne Johnson","Billie Eilish","Selena Gomez","Zendaya","Tom Holland","Jennifer Lopez","Harry Styles","Katy Perry","Shakira","Drake","Post Malone","Chris Hemsworth"],
+  athletes:["Lionel Messi","Cristiano Ronaldo","Stephen Curry","Kylian Mbappé","LeBron James","Neymar","Usain Bolt","Serena Williams","Roger Federer","Tom Brady","Michael Jordan","Simone Biles","Zlatan Ibrahimović","Ronaldinho"],
+  others:["Elon Musk","Barack Obama","Oprah Winfrey","Donald Trump","PewDiePie","Mark Zuckerberg","Albert Einstein","Michael Jackson","Steve Jobs","Walt Disney","Marie Curie","Isaac Newton"]
+};
+
+// Countdown
+function startCountdown(category){
+  goToScreen("countdownScreen");
+  let time=10;
+  document.getElementById("countdown").innerText=time;
+  const interval=setInterval(()=>{
+    time--;
+    document.getElementById("countdown").innerText=time;
+    if(time<=0){
+      clearInterval(interval);
+      revealWord(category);
+    }
+  },1000);
+}
+
+// Reveal
+function revealWord(category){
+  const arr=words[category];
+  const choice=arr[Math.floor(Math.random()*arr.length)];
+  document.getElementById("word").innerText=choice;
+  goToScreen("wordScreen");
+}
+</script>
+</body>
+</html>
